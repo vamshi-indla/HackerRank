@@ -1,0 +1,19 @@
+# Enter your code here. Read input from STDIN. Print output to STDOUT 
+# Code to generate Factorial
+
+# Read input
+n <- suppressWarnings(readLines(file("stdin")))
+
+#Data Preprocessing
+class(n) <- "numeric"
+
+#Initialization
+fac <- 1 
+
+#Function
+for (i in 1:n){ 
+    fac <- fac * i 
+}
+
+#Output Formatting
+cat(fac)
