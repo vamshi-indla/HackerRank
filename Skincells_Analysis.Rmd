@@ -1,0 +1,114 @@
+---
+title: "SkinCell_Analysis"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+ 
+Skincells dataset has 3 variables, day of observation, amount of time colony was exposed to solar simulator, number of live cells  in the colony. Experiment was performed on 4 days, and collected 118 observations.
+
+```{r,echo=FALSE} 
+# Load the dataset into RStudio 
+data <- read.csv("temp.txt",sep = '\t')
+```
+
+Sample data can be seen in Table1.
+
+```{r}
+head(data)
+```
+
+## Descriptive Analysis
+
+Descriptive analysis is performed on the data and below are the observations
+1. Number of observations collected on Day1 to Day3 are 29, and Day4 is 31. 
+2. Time exposed in mins, ranges from 0 to 4 minutes
+3. logcells values range from 0 to 12 in count. At first glance, it is evident that the longer time the cells are exposed, the shorter their life span is.
+
+Refer Figure-1 below
+
+```{r, echo=FALSE}
+library(ggplot2)
+g <- ggplot(data, aes(factor(time), logcells)) + labs(x="LogCells",y="Time in mins") + ggtitle("Figure-1 Cell Count decreases with Increased Exposure")
+```
+
+```{r}
+g   + geom_boxplot(outlier.colour = "green")  + coord_flip()
+```
+ 
+A linear regression model was fitted to these data with logcells as a continuous response variable,  time is a continous predictor, day is a categorical predictor. To allow maximum flexibility in the initial model, an interaction of day and time was included.
+
+
+## Model - 1 
+
+```{r,echo=TRUE}
+data$day <- as.factor(data$day)
+reg.model<-lm(logcells~(time+day+day*time),data=data)
+summary(reg.model)
+anova(reg.model)
+```
+
+p-value is statistically significant for time, indicating that cells count is predominantly dependent on exposure time.
+Every unit of increased exposure time, cells count decreases by 1.4 units
+Prediction accuracy of the model is 26%, which is very low.
+Outlier detection analysis is performed to check, if there were incorrect observations captured due to contamination or any other factors.
+
+```{r,echo=FALSE}
+library("car")
+# Outlier Analysis 
+influence.measures(reg.model)
+influenceIndexPlot(reg.model, id.n=3) # Index Plots of the influence measures
+```
+
+```{r}
+# Outlier Analysis : 
+influencePlot(reg.model, id.n=3) # A user friendly representation of the above
+```
+
+Below observations are severly influencing the model. 
+
+```{r}
+data[c(20,28,29,56,86,88,116),]
+```
+
+Data points 28, 86 are contradicting to our understanding, i.e When the exposure is maximum, cells count should be low.
+however in Data point 86, cell count is 9. This could have caused due to contamination or incorrect results capture.
+
+## Model - 2
+
+```{r}
+# Deleting 20,28,29,56,86,88,116 data points 
+reg.model2<-lm(logcells~(time+day+day*time),data=data[-c(20,28,29,56,86,88,116),])
+summary(reg.model2)
+```
+
+Prediction accuracy increased to 32% after removal of outlier datapoints.
+Many of the interaction variables are insignificant, and their importance can be checked by performing stepwise model selectoin by AIC
+
+```{r}
+# Perform stepwise Model selection
+library("MASS")
+stepAIC(reg.model2)
+```
+
+AIC is lowest, when the model includes time and day variable, without interaction. Lets build the final model and check the prediction accuracy of the model.
+
+## Model - 3
+
+```{r}
+# Deleting 20,28,29,56,86,88,116 data points and day and time are the only predictors
+reg.model3<-lm(logcells~(time+day),data=data[-c(20,28,29,56,86,88,116),])
+summary(reg.model3)
+```
+
+Prediction accuracy jumped to 34%. 
+
+# Conclusion
+
+1. Every unit increase of exposure time, reduces cells count by 1.3
+2. day2, day3, day4 are having significant influence on cell count, which indicates there is definitely an external influence which impacted the experiment.
+3. It is advisable to perform the experiment in a controlled environment for better results and predictability.
